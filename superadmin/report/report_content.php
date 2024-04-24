@@ -1,491 +1,858 @@
-<?php
-// Include your database configuration file
-include_once('../../config.php');
+<!DOCTYPE html>
+<html lang="en">
 
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+    <style>
+        /* Add CSS styles for the table */
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            /* Set to 100% for full width */
+            border: 1px solid #000;
+            /* Border color and thickness */
+        }
 
-$sql = "SELECT *,family_plannings.id as id,patients.first_name as first_name,patients.last_name as last_name,nurses.first_name as first_name2,nurses.last_name as last_name2
-FROM family_plannings
-JOIN patients ON family_plannings.patient_id = patients.id
-JOIN nurses ON family_plannings.nurse_id = nurses.id
-WHERE family_plannings.is_active = 0 AND family_plannings.not_approved = 1";
+        td,
+        th {
+            border: 1px solid #000;
+            /* Border for table cells */
+            padding: 8px;
+            text-align: center;
+        }
 
+        .filter-button {
+            background-color: #4CAF50;
+            /* Green */
+            border: none;
+            color: white;
+            padding: 15px 32px;
+            text-align: center;
+            text-decoration: none;
+            display: inline-block;
+            font-size: 16px;
+            margin: 4px 2px;
+            cursor: pointer;
+            border-radius: 12px;
+        }
+    </style>
+</head>
 
-$result = $conn->query($sql);
-
-if ($result === false) {
-    die("Query failed: " . $conn->error);
-}
-
-?>
-
-<div class="container-fluid">
-<hr>
-<div class="row">
-    <div class="col">
-        <h5>Patient List</h5>
-        <form method="POST" action="generate-patient.php">
-        <button type="submit" class="btn btn-primary">Generate List of Patients</button>
-        </form>
-    </div>
-    <div class="col">
-        <h5>Consultation List</h5>
-        <form method="POST" action="generate-consultation.php">
-        <button type="submit" class="btn btn-primary">Generate List of Consultation Checkups</button>
-        </form>
-    </div>
-</div>
-
-<br>
-<hr>
-<div class="row">
-    <div class="col">
-        <h5>Family Planning List</h5>
-        <form method="POST" action="generate-family.php">
-        <button type="submit" class="btn btn-primary">Generate List of Family Planning Checkups</button>
-        </form>
-    </div>
-    <div class="col">
-        <h5>Prenatal List</h5>
-        <form method="POST" action="generate-prenatal.php">
-        <button type="submit" class="btn btn-primary">Generate List of Prenatal Checkups</button>
-        </form>
-    </div>
-</div>
-
-<br>
-<hr>
-<div class="row">
-    <div class="col">
-        <h5>Immunization</h5>
-        <form method="POST" action="generate-immunization.php">
-        <button type="submit" class="btn btn-primary">Generate List of Immunization Checkups</button>
-        </form>
-    </div>
-</div>
-
-<hr>
-<div class="row">
-    <div class="col">
-        <h5>FHSIS Report</h5>
-        <form method="POST" action="generate-fhsis.php">
-        <button type="submit" class="btn btn-primary">Generate FHSIS Report</button>
-        </form>
-    </div>
-</div>
-
-
-
-
-    <!-- modal edit -->
-
-<div class="modal fade" id="editModal" tabindex="-1" role="dialog" aria-labelledby="exampleModalLabel" aria-hidden="true">
-    <div class="modal-dialog" role="document">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="exampleModalLabel">Edit Family Planning</h5>
-                <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                    <span aria-hidden="true">&times;</span>
-                </button>
+<body>
+    <?php
+    // Get the current month and year
+    $currentMonth = date('F');
+    $currentYear = date('Y');
+    ?>
+   <div class="container mt-5">
+        <div class="row">
+            <div class="col-md-4">
+                <label for="fromDate">From Date:</label>
+                <input type="date" id="fromDate" name="fromDate" class="form-control">
             </div>
-            <div class="modal-body">
-                <form id="editForm">
-                <input type="hidden" id="editdataId" name="primary_id">
-                      <!-- Form fields go here -->
-                      <div class="form-group">
-                        <label for="">Select Patient</label>
-                        <select class="form-control" name="patient_id" id="editPatient_id" required>
-                            <option value="" disabled selected hidden>Select a patient</option>
-                            <?php
-
-                            // Query to fetch patients from the database
-                            $sql2 = "SELECT id, first_name, last_name FROM patients
-                            WHERE is_active = 0 ORDER BY id DESC";
-                            $result2 = $conn->query($sql2);
-
-                            if ($result2->num_rows > 0) {
-                                while ($row2 = $result2->fetch_assoc()) {
-                                    $patientId = $row2['id'];
-                                    $firstName = $row2['first_name'];
-                                    $lastName = $row2['last_name'];
-
-                                    // Output an option element for each patient
-                                    echo "<option value='$patientId'>$firstName $lastName</option>";
-                                }
-                            } else {
-                                echo "<option disabled>No patients found</option>";
-                            }
-
-                            // Close the database connection
-                          
-                            ?>
-                        </select>
-
-                    </div>
-
-                    <div class="form-group">
-                        <label for="">Select Nurse</label>
-                        <select class="form-control" name="nurse_id" id="editNurse_id" required>
-                            <option value="" disabled selected hidden>Select a nurse</option>
-                            <?php
-
-                            $sql3 = "SELECT id, first_name, last_name FROM nurses
-                            WHERE is_active = 0 ORDER BY id DESC";
-                            $result3 = $conn->query($sql3);
-
-                            if ($result3->num_rows > 0) {
-                                while ($row3 = $result3->fetch_assoc()) {
-                                    $nurseId = $row3['id'];
-                                    $firstName2 = $row3['first_name'];
-                                    $lastName2 = $row3['last_name'];
-
-                                    // Output an option element for each patient
-                                    echo "<option value='$nurseId'>$firstName2 $lastName2</option>";
-                                }
-                            } else {
-                                echo "<option disabled>No nurse found</option>";
-                            }
-
-                            // Close the database connection
-                          
-                            ?>
-                        </select>
-
-                    </div>
-
-                    <div class="form-group">
-                        <label for="">Select Method</label>
-                        <select class="form-control" name="method" id="editMethod" required>
-                            <option value="" disabled selected hidden>Select a method</option>
-                            <option value="Barrier Method">Barrier Method</option>
-                            <option value="Hormonal Method">Hormonal Method</option>
-                            <option value="Intrauterine Device">Intrauterine Device</option>
-                            <option value="Permanent Method">Permanent Method</option>
-                            <option value="Fertility Awareness Method">Fertility Awareness Method</option>
-                            <option value="Emergency Contraception">Emergency Contraception</option>
-                            <option value="Lactational Amenorrhea Method (LAM)">Lactational Amenorrhea Method (LAM)</option>
-                            <option value="Withdrawal Method">Withdrawal Method</option>
-                            <option value="Spermicides">Spermicides</option>
-                            <option value="Sterilization">Sterilization</option>
-                            <option value="Natural Methods">Natural Methods</option>
-                            <option value="Male and Female Contraceptive Devices">Male and Female Contraceptive Devices</option>
-                        </select>
-
-                    </div>
-
-                    <div class="form-group">
-                        <label for="">Serial No.</label>
-                        <input type="text" class="form-control" id="editSerial" name="serial" required>
-                    </div>
-                </form>
+            <div class="col-md-4">
+                <label for="toDate">To Date:</label>
+                <input type="date" id="toDate" name="toDate" class="form-control">
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
-                <button type="button" class="btn btn-primary" id="updateButton">Update</button>
+            <div class="col-md-4">
+                <label for="">&nbsp;</label>
+                <button onclick="filterByDateRange()" class="btn btn-primary btn-block">Apply Filter</button>
             </div>
         </div>
     </div>
-</div>
+    <table>
+        <tr>
+            <td colspan="35">
+                <center>
+                    <?php
+                    // Output the report header
+                    echo "FHSIS REPORT for the month of $currentMonth Year $currentYear";
+                    ?>
+                    <br>
+                    Name of Municipality/City: CAGAYAN DE ORO CITY
+                    <br>
+                    Name of Province: MISAMIS ORIENTAL
+                    <br>
+                    Name of Barangay: BULUA
+                    <br>
+                    Projected Population of the Year:32,376
+                    <br>
+                    For Submission to CHO
+                </center>
+            </td>
+        </tr>
+        <tr>
+            <td colspan="35">
+                Section A. Family Planning Services and Deworming for Women of Reproductive Age
+            </td>
+        </tr>
 
-    <!-- modal edit -->
-</div>
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.3/dist/umd/popper.min.js"></script>
-<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@10"></script>
+        <tr>
+            <td rowspan="2" colspan="7">
+                A1. Whole Column
+                <br>
+                (Col. 1)
+            </td>
+            <!-- Fix this below -->
+            <td colspan="7">
+                Age
+                <br>
+                (Col. 2)
+            </td>
+            <td rowspan="2" colspan="7">
+                Total for WRA 15-19 y/o <br>
+                (Col. 3)
+            </td>
+            <td rowspan="2" colspan="7">
+                Interpretation<br>
+                (Col. 4)
+            </td>
+            <td rowspan="2" colspan="7">
+                Recommendation/Action<br>
+                (Col. 5)
+            </td>
+        </tr>
+        <tr>
+            <!-- Nested row for Age -->
+            <td colspan="3">
+                10-14 y/o
+            </td>
+            <td colspan="2">
+                15-19 y/o
+            </td>
+            <td colspan="2">
+                20-49 y/o
+            </td>
+        </tr>
+        <tr>
+            <td colspan="7">
+                1. Proportion of WRA with unmet need for modern FP
+                (No.1.1/No.1.2 X 100)
+            </td>
+            <td colspan="3"></td>
+            <td colspan="2"></td>
+            <td colspan="2"></td>
+            <td colspan="7"></td>
+            <td colspan="7" rowspan="3"></td>
+            <td colspan="7" rowspan="3"></td>
+        </tr>
 
-<script>
- $(document).ready(function () {
+        <tr>
+            <td colspan="7">
+                1.1 Number of WRA with unmet need for MFP - Total
+            </td>
+            <td colspan="3"></td>
+            <td colspan="2"></td>
+            <td colspan="2"></td>
+            <td colspan="7"></td>
+        </tr>
 
-    document.getElementById('openModalButton').addEventListener('click', function() {
-  $('#addModal').modal('show'); // Show the modal
-});
-    
+        <tr>
+            <td colspan="7">
+                1.2
+                Total No. of Estimated WRA
+                (Total Population X 25.854%)
+            </td>
+            <td colspan="3"></td>
+            <td colspan="2"></td>
+            <td colspan="2"></td>
+            <td colspan="7"></td>
 
-    <?php if ($result->num_rows > 0): ?>
-        var table = $('#tablebod').DataTable({
-            columnDefs: [
-                { targets: 0, data: 'id' },
-                { targets: 1, data: 'last_name' },
-                { targets: 2, data: 'checkup_date' },
-                {
-                    targets: 3,
-                    searchable: false,
-                    data: null,
-                    render: function (data, type, row) {
-                        var editButton = '<button type="button" class="btn btn-success editbtn" data-row-id="' + row.id + '"><i class="fas fa-edit"></i> Edit</button>';
-                        var deleteButton = '<button type="button" class="btn btn-danger deletebtn" data-id="' + row.id + '"><i class="fas fa-trash"></i> Delete</button>';
-                        return editButton + ' ' + deleteButton;
-                    }
-                } // Action column
-            ],
-            // Set the default ordering to 'id' column in descending order
-            order: [[0, 'desc']]
-        });
+        </tr>
+        <tr>
+            <td rowspan="2" colspan="5">
+                A2. Use of FP Method
+                <br>
+                (Col. 1)
+            </td>
+            <!-- Fix this below -->
+            <td rowspan="2" colspan="4">
+                Current Users
+                <br>
+                (Beginning of Qtr)
+                <br>
+                (Col. 2)
+            </td>
+            <td colspan="8">
+                Acceptors
+            </td>
+            <td rowspan="2" colspan="4">
+                Drop-outs<br>
+                (Present Quarter) <br>
+                (Col. 5)
+            </td>
+            <td rowspan="2" colspan="4">
+                Current Users<br>
+                (End of Quarter) <br>
+                (Col. 6)
+            </td>
+            <td rowspan="2" colspan="4">
+                New Acceptors<br>
+                (Last Month of Present Qtr) <br>
+                (Col. 7)
+            </td>
+            <td rowspan="2" colspan="4">
+                CPR<br>
+                Col. 6/TP x 25.854% <br>
+                (Col. 8)
+            </td>
+            <td rowspan="2">
+                Interpretation <br>
+                (Col.9)
+            </td>
+            <td rowspan="2">Recommendation/Actions to be
+                <br>
+                (Col. 10)
+            </td>
+        </tr>
+        <tr>
+            <!-- Nested row for Age -->
+            <td colspan="4">
+                New(end of Qtr)
+                (Col. 3)
+            </td>
+            <td colspan="4">
+                Other(end of Qtr)
+                (Col. 4)
+            </td>
+        </tr>
+        <tr>
+            <td colspan="5"></td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td>10-14</td>
+            <td>15-19</td>
+            <td>20-49</td>
+            <td>Total</td>
+            <td rowspan="18"></td>
+            <td rowspan="18"></td>
 
-    <?php else: ?>
-        // Initialize DataTable without the "Action" column when no rows are found
-        var table = $('#tablebod').DataTable({
-            columnDefs: [
-                { targets: 0, data: 'id' },
-                { targets: 1, data: 'last_name' },
-                { targets: 2, data: 'checkup_date' },
-            ],
-            // Set the default ordering to 'id' column in descending order
-            order: [[0, 'desc']]
-        });
-    <?php endif; ?>
+        </tr>
+        <tr>
+            <td colspan="5">a. BTL - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5">b. NSV - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5">c. Condom - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5">d. Pill - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5"> d.1 Pills-POP - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5"> d.2 Pills-COC - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5">e. Injectibles(DMPA/POI)-Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
+
+        <tr>
+            <td colspan="5">f. Implant - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
 
 
-    $('#addButton').click(function () {
+        <tr>
+            <td colspan="5">g. IUD(IUD-I and IUD-PP) - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
 
-        table.destroy(); // Destroy the existing DataTable
-        table = $('#tablebod').DataTable({
-            columnDefs: [
-                { targets: 0, data: 'id' },
-                { targets: 1, data: 'last_name' },
-                { targets: 2, data: 'checkup_date' },
-                {
-                    targets: 3,
-                    searchable: false,
-                    data: null,
-                    render: function (data, type, row) {
-                        var editButton = '<button type="button" class="btn btn-success editbtn" data-row-id="' + row.id + '"><i class="fas fa-edit"></i> Edit</button>';
-                        var deleteButton = '<button type="button" class="btn btn-danger deletebtn" data-id="' + row.id + '"><i class="fas fa-trash"></i> Delete</button>';
-                        return editButton + ' ' + deleteButton;
-                    }
-                } // Action column
-            ],
-            // Set the default ordering to 'id' column in descending order
-            order: [[0, 'desc']]
-        });
+        <tr>
+            <td colspan="5"> g.1 IUD-I - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+        </tr>
 
-        
-        // Get data from the form
+        <tr>
+            <td colspan="5"> g.1 IUD-PP - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            >
+        </tr>
 
-        var patient_id = $('#patient_id').val();
-        var nurse_id = $('#nurse_id').val();
-        var serial = $('#serial').val();
-        var method = $('#method').val();
+        <tr>
+            <td colspan="5">h. NFP-LAM - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
 
-        // AJAX request to send data to the server
-        $.ajax({
-            url: 'action/add_family.php',
-            method: 'POST',
-            data: {
-                patient_id: patient_id,
-                nurse_id: nurse_id,
-                serial: serial,
-                method: method,
-            },
-            success: function (response) {
-           
-                if (response.trim() === 'Success') {
-
-
-                    // Clear the form fields
-                    $('#patient_id').val('');
-                    $('#nurse_id').val('');
-                    $('#serial').val('');
-                    $('#method').val('');
-
-                    updateData();
-                    $('#addModal').modal('hide');
-
-                // Remove the modal backdrop manually
-                $('body').removeClass('modal-open');
-                $('.modal-backdrop').remove();
-                    // Show a success SweetAlert
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: 'Family Planning added successfully',
-                    });
-            
-                } else {
-                        // Show an error SweetAlert
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error adding data: ' + response,
-            });
-                }
-            },
-            error: function (error) {
-                // Handle errors
-                Swal.fire({
-            icon: 'error',
-            title: 'Error',
-            text: 'Error adding data: ' + error,
-        });
-            },
-        
-        });
-    });
+        </tr>
 
 
-    function updateData() {
-        $.ajax({
-            url: 'action/get_family.php',
-            method: 'GET',
-            success: function (data) {
-                // Assuming the server returns JSON data, parse it
-                var get_data = JSON.parse(data);
+        <tr>
+            <td colspan="5"> i. NFP-BBT - Total<< /td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
 
-                // Clear the DataTable and redraw with new data
-                table.clear().rows.add(get_data).draw();
-            },
-            error: function (error) {
-                // Handle errors
-                console.error('Error retrieving data: ' + error);
-            }
-        });
-    }
+        </tr>
 
-    // Delete button click event
-$('#tablebod').on('click', '.deletebtn', function () {
-    var deletedataId = $(this).data('id');
-    
-    // Confirm the deletion with a SweetAlert dialog
-    Swal.fire({
-        title: 'Confirm Delete',
-        text: 'Are you sure you want to delete this data?',
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#3085d6',
-        cancelButtonColor: '#d33',
-        confirmButtonText: 'Yes, delete it'
-    }).then((result) => {
-        if (result.isConfirmed) {
-            $.ajax({
-                url: 'action/delete_family.php',
-                method: 'POST',
-                data: { primary_id: deletedataId },
-                success: function (response) {
-                    if (response === 'Success') {
-                      
-                        updateData();
-                        Swal.fire('Deleted', 'The Family Planning has been deleted.', 'success');
-                    } else {
-                        Swal.fire('Error', 'Error deleting data: ' + response, 'error');
-                    }
-                },
-                error: function (error) {
-                    Swal.fire('Error', 'Error deleting data: ' + error, 'error');
-                }
-            });
+
+
+        <tr>
+            <td colspan="5"> j. NFP-CMM - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+
+        </tr>
+
+        <tr>
+            <td colspan="5"> k. NFP-STM - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+
+        </tr>
+
+        <tr>
+            <td colspan="5"> l. NFP-SDM - Total</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+
+        </tr>
+
+        <tr>
+            <td colspan="5"> m. Total Current Users</td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+            <td></td>
+
+        </tr>
+        <!-- Rest of your table code -->
+    </table>
+    <script>
+        // Set the timeout duration (in milliseconds)
+        var inactivityTimeout = 360000; // 10 seconds
+
+        // Track user activity
+        var activityTimer;
+
+        function resetTimer() {
+            clearTimeout(activityTimer);
+            activityTimer = setTimeout(logout, inactivityTimeout);
         }
-    });
-});
 
-
-
-// Edit button click event
-$('#tablebod').on('click', '.editbtn', function () {
-    var editId = $(this).data('row-id');
-console.log(editId);
-    $.ajax({
-        url: 'action/get_family_by_id.php', // 
-        method: 'POST',
-        data: { primary_id: editId },
-        success: function (data) {
-          
-            var editGetData = data; 
-            
-            console.log(editGetData);
-            $('#editModal #editdataId').val(editGetData.id);
-            $('#editModal #editPatient_id').val(editGetData.patient_id);
-            $('#editModal #editNurse_id').val(editGetData.nurse_id);
-            $('#editModal #editMethod').val(editGetData.method);
-            $('#editModal #editSerial').val(editGetData.serial);
-            $('#editModal').modal('show');
-        },
-        error: function (error) {
-            console.error('Error fetching  data: ' + error);
-        },
-    });
-});
-
-$('#updateButton').click(function () {
-   
-
-    var editId = $('#editdataId').val();
-    var patient_id = $('#editPatient_id').val();
-    var nurse_id = $('#editNurse_id').val();
-    var method = $('#editMethod').val();
-    var serial = $('#editSerial').val();
-  
-    $.ajax({
-        url: 'action/update_family.php',
-        method: 'POST',
-        data: {
-            primary_id: editId,
-            patient_id: patient_id,
-            nurse_id: nurse_id,
-            method: method,
-            serial: serial,
-        },
-        success: function (response) {
-            // Handle the response
-            if (response === 'Success') {
-                updateData();
-                $('#editModal').modal('hide');
-                // Remove the modal backdrop manually
-                $('body').removeClass('modal-open');
-                $('.modal-backdrop').remove();
-                // Show a success Swal notification
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: 'Family Planning updated successfully',
-                });
-            } else {
-                // Show an error Swal notification
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: 'Error updating data: ' + response,
-                });
-            }
-        },
-        error: function (error) {
-            // Show an error Swal notification for AJAX errors
-            Swal.fire({
-                icon: 'error',
-                title: 'Error',
-                text: 'Error updating data: ' + error,
-            });
+        function logout() {
+            // Redirect to logout PHP script
+            window.location.href = '../action/logout.php';
         }
-    });
-});
 
+        // Add event listeners to reset the timer on user activity
+        document.addEventListener('mousemove', resetTimer);
+        document.addEventListener('keypress', resetTimer);
 
+        // Initialize the timer on page load
+        resetTimer();
+    </script>
+    <script>
+        function filterByFromDate() {
+            // Implement your logic for filtering by From Date here
+            alert("Filtering by From Date...");
+        }
 
-});
+        function filterByToDate() {
+            // Implement your logic for filtering by To Date here
+            alert("Filtering by To Date...");
+        }
+    </script>
+    <script>
+        function filterByDateRange() {
+            // Retrieve selected dates
+            var fromDate = document.getElementById('fromDate').value;
+            var toDate = document.getElementById('toDate').value;
 
+            // Implement your filtering logic with fromDate and toDate here
+            alert("Filtering from " + fromDate + " to " + toDate);
+        }
+    </script>
+</body>
 
-</script>
-
-<script>
-  // Set the timeout duration (in milliseconds)
-  var inactivityTimeout = 360000; // 10 seconds
-
-  // Track user activity
-  var activityTimer;
-
-  function resetTimer() {
-    clearTimeout(activityTimer);
-    activityTimer = setTimeout(logout, inactivityTimeout);
-  }
-
-  function logout() {
-    // Redirect to logout PHP script
-    window.location.href = '../action/logout.php';
-  }
-
-  // Add event listeners to reset the timer on user activity
-  document.addEventListener('mousemove', resetTimer);
-  document.addEventListener('keypress', resetTimer);
-
-  // Initialize the timer on page load
-  resetTimer();
-</script>
+</html>
